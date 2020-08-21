@@ -7,7 +7,7 @@ import { Provider as DispatchProvider } from "./context/dispatcherContext";
 import { INIT_STATE, reducer } from "./stateManager/reducer";
 
 const Routes = MainRoutes();
-//TODO:
+// TODO:
 function App() {
   const [state, dispatch] = useReducer(reducer, INIT_STATE);
   const authenticated = state.userId !== null;
