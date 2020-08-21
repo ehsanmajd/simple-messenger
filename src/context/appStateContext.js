@@ -1,4 +1,4 @@
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext } from "react";
 
 const AppStateContext = createContext({});
 
@@ -9,10 +9,8 @@ function useAppState() {
 
 function Provider({ state, ...rest }) {
   const appState = React.useMemo(() => state, [state]);
-  return <AppStateContext.Provider value={appState} {...rest} />
+  //add Comment
+  return <AppStateContext.Provider value={appState} {...rest} />;
 }
 
-export {
-  Provider,
-  useAppState
-}
+export { Provider, useAppState };
