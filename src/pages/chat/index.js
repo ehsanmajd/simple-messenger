@@ -11,6 +11,7 @@ import { loadContacts, loadRecentChats, submitTextMessage, getChatMessages } fro
 import io from 'socket.io-client';
 import { baseUrl } from '../../utility/request';
 import moment from 'moment';
+import ErrorBoundary from '../../sharedComponents/errorBoundry';
 
 export default function Index() {
   const { userId, chatList, messages, selectedChatId } = useAppState();
@@ -28,13 +29,13 @@ export default function Index() {
         .sort((a, b) => {
           const lastMessageA = messages.filter(x => x.chatId === a.id);
           const lastMessageB = messages.filter(x => x.chatId === b.id);
-          if(!lastMessageA && !lastMessageB) {
+          if (!lastMessageA && !lastMessageB) {
             return 0;
           }
-          else if(!lastMessageA && lastMessageB) {
+          else if (!lastMessageA && lastMessageB) {
             return -1;
           }
-          else if(!lastMessageB && lastMessageA) {
+          else if (!lastMessageB && lastMessageA) {
             return +1
           }
           else {
@@ -44,7 +45,6 @@ export default function Index() {
     },
     [chatList, messages]
   )
-
   const selectedChatMessages = messages.filter(x => x.chatId === selectedChatId);
 
   function handleChatSelect(id) {
@@ -98,7 +98,7 @@ export default function Index() {
     },
     [userId, dispatch]
   )
-
+  
   return (
     <div className={styles['layout']}>
       <div className={styles['side']}>
@@ -120,22 +120,24 @@ export default function Index() {
         </List>
       </div>
       <div className={styles['main']}>
-        {selectedChatId &&
-          <ChatDetail
-            onClose={handleClose}
-            selectedChatId={selectedChatId}
-            onSubmit={handleSubmit}
-            avatar={selectedChat.avatar}
-            name={selectedChat.name}
-            messages={selectedChatMessages.map(message => {
-              return {
-                id: message.id,
-                text: message.text,
-                me: message.userId === userId
-              }
-            })}
-          />
-        }
+        <ErrorBoundary>
+          {selectedChatId &&
+            <ChatDetail
+              onClose={handleClose}
+              selectedChatId={selectedChatId}
+              onSubmit={handleSubmit}
+              avatar={selectedChat.avatar}
+              name={selectedChat.name}
+              messages={selectedChatMessages.map(message => {
+                return {
+                  id: message.id,
+                  text: message.text,
+                  me: message.userId === userId
+                }
+              })}
+            />
+          }
+        </ErrorBoundary>
       </div>
     </div>
   )

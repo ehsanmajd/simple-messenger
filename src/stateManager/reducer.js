@@ -153,7 +153,7 @@ function handleLoadChatMessages(state, { chatId, data }) {
     ...state,
     messages: [
       ...state.messages.filter(x => x.chatId !== chatId),
-      ...data.messages.map(msg =>
+      ...(data.messages || []).map(msg =>
         ({ chatId, id: msg.id, text: msg.content, userId: msg.userId, time: msg.date }))
     ],
     selectedChatId: chatId,
