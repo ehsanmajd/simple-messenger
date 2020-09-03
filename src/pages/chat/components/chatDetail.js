@@ -9,6 +9,7 @@ import { useDispatch } from '../../../context/dispatcherContext';
 import { useAppState } from '../../../context/appStateContext';
 import { prependChatMessages } from '../../../stateManager/actionCreator';
 import TextMessage from './textMessage';
+import Spinner from '../../../sharedComponents/spinner';
 
 export default function ChatDetail(
   {
@@ -18,6 +19,7 @@ export default function ChatDetail(
     onSubmit,
     selectedChatId,
     onClose,
+    loading
   }
 ) {
   const [text, setText] = useState('');
@@ -82,9 +84,11 @@ export default function ChatDetail(
     },
     [selectedChatId]
   )
+  console.log(messages);
 
   return (
     <>
+      
       <TitleBar
         first={<FontAwesomeIcon onClick={onClose} icon={faTimes} size='lg' color='#009588' className='pointer' />}
         middle={
@@ -96,10 +100,13 @@ export default function ChatDetail(
         last={<FontAwesomeIcon icon={faEllipsisV} size='lg' color='#009588' className='pointer' />}
       />
       <div className={styles['chat-box']}>
+        <Spinner loading={true} />
         <ul className={styles['messages-panel']} ref={messageContainer}>
           {
             messages.map((message, index) => {
+              
               return <TextMessage
+                time={message.time}
                 ref={messages.length === index + 1 ? lastEmptyMessage : null}
                 me={message.me}
                 text={message.text}

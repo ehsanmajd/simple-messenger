@@ -7,8 +7,13 @@
   border: solid 1px #ccc;
 
   overflow-y: hidden;
+
 }
 
 .side {
   border-right: solid 2px #ccc;
+}
+
+.main {
+  position: relative;
 }

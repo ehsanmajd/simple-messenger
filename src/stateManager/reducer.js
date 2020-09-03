@@ -7,7 +7,9 @@ export const INIT_STATE = {
   messages: [
   ],
   selectedChatId: null,
-  contacts: []
+  contacts: [],
+  loading: false,
+  waitingForMessages: false
 }
 
 // `chat/start/user/{userId}`
@@ -29,6 +31,8 @@ const ACTION_HANDLERS = {
   [ACTIONS.CHAT_MESSAGES_PREPENDED]: handleChatMessagePrepended,
   [ACTIONS.NEW_USER_REGISTERED]: handleNewUserRegistered,
   [ACTIONS.NEW_MESSAGE_RECEIVED]: handleNewMessageReceived,
+  [ACTIONS.LOADING]: handleLoading,
+  [ACTIONS.WAITING_FOR_MESSAGE]: handleWaitingForMessage,
 }
 
 function handleChatSelected(state, payload) {
@@ -115,7 +119,8 @@ function handleInitDataLoaded(state, payload) {
     )),
     contacts: payload.contacts.filter(item =>
       item.id !== state.userId),
-    messages
+    messages,
+    loading: false
   }
 }
 
@@ -157,7 +162,8 @@ function handleLoadChatMessages(state, { chatId, data }) {
         ({ chatId, id: msg.id, text: msg.content, userId: msg.userId, time: msg.date }))
     ],
     selectedChatId: chatId,
-    chatList: newChatList
+    chatList: newChatList,
+    waitingForMessages: false
   }
 }
 
@@ -226,4 +232,18 @@ function handleNewMessageReceived(state, { chatId, message }) {
     chatList: newChatList
   }
 
+}
+
+function handleLoading(state) {
+  return {
+    ...state,
+    loading: true
+  };
+}
+
+function handleWaitingForMessage(state) {
+  return {
+    ...state,
+    waitingForMessages: true
+  }
 }

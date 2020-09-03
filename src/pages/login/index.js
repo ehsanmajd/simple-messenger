@@ -16,6 +16,8 @@ export default function Index() {
     signIn(name)
       .then(({ success, result: user }) => {
         if (success) {
+          localStorage.setItem('userId', user.id)
+          localStorage.setItem('username', user.name)
           dispatch(userSingedIn(user))
         }
       })
@@ -30,6 +32,7 @@ export default function Index() {
     [userId, history]
   )
 
+  
   return (
     <div>
       <input type='text' value={name} onChange={e => setName(e.target.value)} />

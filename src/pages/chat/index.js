@@ -4,17 +4,18 @@ import ListItem from './components/listItem';
 import List from './components/list';
 import ChatDetail from './components/chatDetail';
 import styles from './index.module.scss';
-import { newUserRegistered, closeChat, initDataLoaded, loadChatMessages, newMessageReceived } from '../../stateManager/actionCreator';
+import { newUserRegistered, closeChat, loadChatMessages, newMessageReceived, initChatbox } from '../../stateManager/actionCreator';
 import { useAppState } from '../../context/appStateContext';
 import { useDispatch } from '../../context/dispatcherContext';
-import { loadContacts, loadRecentChats, submitTextMessage, getChatMessages } from '../../services/main';
+import { submitTextMessage } from '../../services/main';
 import io from 'socket.io-client';
 import { baseUrl } from '../../utility/request';
 import moment from 'moment';
 import ErrorBoundary from '../../sharedComponents/errorBoundry';
+import Spinner from '../../sharedComponents/spinner';
 
 export default function Index() {
-  const { userId, chatList, messages, selectedChatId } = useAppState();
+  const { userId, chatList, messages, selectedChatId, loading, waitingForMessages } = useAppState();
   const dispatch = useDispatch();
 
   const selectedChat = useMemo(
@@ -51,10 +52,7 @@ export default function Index() {
     if (id === selectedChatId) {
       return;
     }
-    getChatMessages(id, userId)
-      .then(data => {
-        dispatch(loadChatMessages(id, data.result));
-      })
+    dispatch(loadChatMessages(id, userId));
   }
 
   function handleSubmit(text) {
@@ -67,18 +65,7 @@ export default function Index() {
 
   useEffect(
     () => {
-      Promise.all([
-        loadContacts(userId),
-        loadRecentChats(userId)
-      ])
-        .then(([contacts, chats]) => {
-          dispatch(
-            initDataLoaded({
-              contacts,
-              chats
-            })
-          );
-        })
+      dispatch(initChatbox(userId));
     },
     [userId, dispatch]
   )
@@ -98,9 +85,11 @@ export default function Index() {
     },
     [userId, dispatch]
   )
-  
+
+  //console.log();
   return (
     <div className={styles['layout']}>
+      <Spinner loading={loading && !selectedChatId} />
       <div className={styles['side']}>
         <AppStatus />
         <List>
@@ -120,9 +109,11 @@ export default function Index() {
         </List>
       </div>
       <div className={styles['main']}>
+        <Spinner loading={waitingForMessages} />
         <ErrorBoundary>
           {selectedChatId &&
             <ChatDetail
+              loading={waitingForMessages}
               onClose={handleClose}
               selectedChatId={selectedChatId}
               onSubmit={handleSubmit}
@@ -132,7 +123,8 @@ export default function Index() {
                 return {
                   id: message.id,
                   text: message.text,
-                  me: message.userId === userId
+                  me: message.userId === userId,
+                  time: message.time
                 }
               })}
             />
