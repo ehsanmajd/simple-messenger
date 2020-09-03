@@ -1,40 +1,99 @@
-import React, { useReducer, useMemo } from 'react'
+import React, { useMemo, useEffect } from 'react'
 import AppStatus from './components/appStatus';
 import ListItem from './components/listItem';
 import List from './components/list';
 import ChatDetail from './components/chatDetail';
 import styles from './index.module.scss';
-import { INIT_STATE, reducer } from './stateManager/reducer';
-import { chatSelected, submitMessage, closeChat } from './stateManager/actionCreator';
+import { newUserRegistered, closeChat, loadChatMessages, newMessageReceived, initChatbox } from '../../stateManager/actionCreator';
+import { useAppState } from '../../context/appStateContext';
+import { useDispatch } from '../../context/dispatcherContext';
+import { submitTextMessage } from '../../services/main';
+import io from 'socket.io-client';
+import { baseUrl } from '../../utility/request';
+import moment from 'moment';
+import ErrorBoundary from '../../sharedComponents/errorBoundry';
+import Spinner from '../../sharedComponents/spinner';
 
 export default function Index() {
-  const [{ userId, chatList, messages, selectedChatId }, dispatch] = useReducer(reducer, INIT_STATE);
+  const { userId, chatList, messages, selectedChatId, loading, waitingForMessages } = useAppState();
+  const dispatch = useDispatch();
 
   const selectedChat = useMemo(
-    () => chatList.find(x => x.id == selectedChatId),
+    () => chatList.find(x => x.id === selectedChatId),
     [chatList, selectedChatId]
   );
 
+  const sortedChatList = useMemo(
+    () => {
+      return chatList
+        .slice()
+        .sort((a, b) => {
+          const lastMessageA = messages.filter(x => x.chatId === a.id);
+          const lastMessageB = messages.filter(x => x.chatId === b.id);
+          if (!lastMessageA && !lastMessageB) {
+            return 0;
+          }
+          else if (!lastMessageA && lastMessageB) {
+            return -1;
+          }
+          else if (!lastMessageB && lastMessageA) {
+            return +1
+          }
+          else {
+            return moment(lastMessageB.time).isBefore(lastMessageA.time) ? 1 : -1
+          }
+        })
+    },
+    [chatList, messages]
+  )
   const selectedChatMessages = messages.filter(x => x.chatId === selectedChatId);
 
   function handleChatSelect(id) {
-    dispatch(chatSelected(id));
+    if (id === selectedChatId) {
+      return;
+    }
+    dispatch(loadChatMessages(id, userId));
   }
 
   function handleSubmit(text) {
-    dispatch(submitMessage(text));
+    submitTextMessage(userId, selectedChatId, text);
   }
 
   function handleClose() {
     dispatch(closeChat());
   }
 
+  useEffect(
+    () => {
+      dispatch(initChatbox(userId));
+    },
+    [userId, dispatch]
+  )
+
+  useEffect(
+    () => {
+      const socket = io(baseUrl);
+      socket.emit('online', userId);
+
+      socket.on('new-user', user => {
+        dispatch(newUserRegistered(user))
+      });
+
+      socket.on('new-message', data => {
+        dispatch(newMessageReceived(data))
+      })
+    },
+    [userId, dispatch]
+  )
+
+  //console.log();
   return (
     <div className={styles['layout']}>
+      <Spinner loading={loading && !selectedChatId} />
       <div className={styles['side']}>
         <AppStatus />
         <List>
-          {chatList.map(chat => {
+          {sortedChatList.map(chat => {
             const lastMessage = messages.filter(x => x.chatId === chat.id);
             return <ListItem
               selected={chat.id === selectedChatId}
@@ -42,41 +101,35 @@ export default function Index() {
               key={chat.id}
               name={chat.name}
               avatar={chat.avatar}
-              time={chat.time}
+              time={lastMessage.length === 0 ? '' : lastMessage[lastMessage.length - 1].time}
               unreadMessageCount={chat.unreadMessageCount}
-              text={lastMessage[lastMessage.length - 1].text}
+              text={lastMessage.length === 0 ? '' : lastMessage[lastMessage.length - 1].text}
             />
           })}
-          {/* <ListItem name='Maryam Habibi' avatar='/avatar-f.jpg' time='21:14' unreadMessageCount={65} text='Hi, This is a message' />
-          <ListItem name='Mina Mohammadi' avatar='/avatar-f.jpg' time='11:30' unreadMessageCount={15} text='Another Message' />
-          <ListItem name='Reza Ahmadi' avatar='/avatar.png' time='21:14' unreadMessageCount={65} text='Hi, This is a message' />
-          <ListItem name='Afshin Karimi' avatar='/avatar.png' time='11:30' unreadMessageCount={15} text='Another Message' selected />
-          <ListItem name='Mohammad Mardan Nia' avatar='/avatar.png' time='21:14' unreadMessageCount={65} text='Hi, This is a message' />
-          <ListItem name='Sarah Kiani' avatar='/avatar-f.jpg' time='11:30' unreadMessageCount={15} text='Another Message' />
-          <ListItem name='Minoo Mohammadian' avatar='/avatar-f.jpg' time='21:14' unreadMessageCount={65} text='Hi, This is a message' />
-          <ListItem name='Fereydoon Sabet' avatar='/avatar.png' time='11:30' unreadMessageCount={15} text='Another Message' />
-          <ListItem name='Zahra Gholami' avatar='/avatar-f.jpg' time='21:14' unreadMessageCount={65} text='Hi, This is a message' />
-          <ListItem name='Mohammad Bayat' avatar='/avatar.png' time='11:30' unreadMessageCount={15} text='Another Message' /> */}
         </List>
-
       </div>
       <div className={styles['main']}>
-        {selectedChatId &&
-          <ChatDetail
-            onClose={handleClose}
-            selectedChatId={selectedChatId}
-            onSubmit={handleSubmit}
-            avatar={selectedChat.avatar}
-            name={selectedChat.name}
-            messages={selectedChatMessages.map(message => {
-              return {
-                id: message.id,
-                text: message.text,
-                me: message.userId === userId
-              }
-            })}
-          />
-        }
+        <Spinner loading={waitingForMessages} />
+        <ErrorBoundary>
+          {selectedChatId &&
+            <ChatDetail
+              loading={waitingForMessages}
+              onClose={handleClose}
+              selectedChatId={selectedChatId}
+              onSubmit={handleSubmit}
+              avatar={selectedChat.avatar}
+              name={selectedChat.name}
+              messages={selectedChatMessages.map(message => {
+                return {
+                  id: message.id,
+                  text: message.text,
+                  me: message.userId === userId,
+                  time: message.time
+                }
+              })}
+            />
+          }
+        </ErrorBoundary>
       </div>
     </div>
   )

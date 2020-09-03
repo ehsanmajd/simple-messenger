@@ -4,6 +4,12 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEllipsisV, faTimes, faPaperPlane, faPaperclip } from '@fortawesome/free-solid-svg-icons'
 import Avatar from './avatar';
 import styles from './chatDetail.module.scss';
+import { getChatMessages } from '../../../services/main';
+import { useDispatch } from '../../../context/dispatcherContext';
+import { useAppState } from '../../../context/appStateContext';
+import { prependChatMessages } from '../../../stateManager/actionCreator';
+import TextMessage from './textMessage';
+import Spinner from '../../../sharedComponents/spinner';
 
 export default function ChatDetail(
   {
@@ -12,17 +18,23 @@ export default function ChatDetail(
     avatar,
     onSubmit,
     selectedChatId,
-    onClose
+    onClose,
+    loading
   }
 ) {
   const [text, setText] = useState('');
+  const lastMessage = useRef('');
   const input = useRef(null);
   const lastEmptyMessage = useRef(null);
+  const messageContainer = useRef(null);
+  const dispatch = useDispatch();
+  const { userId } = useAppState();
 
   function handleSubmitMessage() {
     if (text !== '') {
       onSubmit(text);
       setText('');
+      lastMessage.current = text;
       input.current.focus();
     }
   }
@@ -35,14 +47,48 @@ export default function ChatDetail(
 
   useEffect(
     () => {
-      input.current.focus();
-      lastEmptyMessage.current.scrollIntoView({ behavior: 'smooth' })
+      function handleScroll() {
+        if (messageContainer.current.scrollTop === 0) {
+          getChatMessages(selectedChatId, userId, messages[messages.length - 1].id)
+            .then(data => {
+              dispatch(prependChatMessages(selectedChatId, data.result));
+            })
+        }
+      }
+      const msgContainer = messageContainer.current;
+      msgContainer.addEventListener('scroll', handleScroll);
+      return () => {
+        msgContainer.removeEventListener('scroll', handleScroll);
+      }
     },
-    [selectedChatId, messages]
+    [selectedChatId, messages, userId, dispatch]
+  )
+
+  useEffect(
+    () => {
+      if (lastEmptyMessage.current && messages.length > 0) {
+        if (messages[messages.length - 1].text === lastMessage.current) {
+          lastEmptyMessage.current.scrollIntoView({ behavior: 'smooth' })
+        }
+      }
+    },
+    [messages]
   );
+
+  useEffect(
+    () => {
+      input.current.focus();
+      if (lastEmptyMessage.current) {
+        lastEmptyMessage.current.scrollIntoView({ behavior: 'smooth' });
+      }
+    },
+    [selectedChatId]
+  )
+  console.log(messages);
 
   return (
     <>
+      
       <TitleBar
         first={<FontAwesomeIcon onClick={onClose} icon={faTimes} size='lg' color='#009588' className='pointer' />}
         middle={
@@ -54,16 +100,18 @@ export default function ChatDetail(
         last={<FontAwesomeIcon icon={faEllipsisV} size='lg' color='#009588' className='pointer' />}
       />
       <div className={styles['chat-box']}>
-        <ul className={styles['messages-panel']}>
+        <Spinner loading={true} />
+        <ul className={styles['messages-panel']} ref={messageContainer}>
           {
             messages.map((message, index) => {
-              return <li
+              
+              return <TextMessage
+                time={message.time}
                 ref={messages.length === index + 1 ? lastEmptyMessage : null}
-                className={styles[message.me ? 'me' : '']}
+                me={message.me}
+                text={message.text}
                 key={message.id}
-              >
-                {message.text}
-              </li>
+              />
             })
           }
         </ul>

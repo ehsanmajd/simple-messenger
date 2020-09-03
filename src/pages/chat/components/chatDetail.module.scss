@@ -19,6 +19,7 @@
   background-color: rgb(247, 248, 246);
   display: flex;
   flex-direction: column;
+  position: relative;
 
   .messages-panel {
     flex: 1;
@@ -28,20 +29,6 @@
     overflow-y: auto;
     padding: 0 25px;
     margin-top: 5px;
-
-    >li {
-      box-sizing: border-box;
-      padding: 7px;
-      margin-bottom: 10px;
-      width: 35%;
-      border: solid 1px #ccc;
-      background-color: whitesmoke;
-      border-radius: 5px;
-      &.me {
-        align-self: flex-end;
-        background-color: yellowgreen;
-      }
-    }
   }
 
   .input-section {
