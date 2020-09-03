@@ -84,7 +84,6 @@ export default function ChatDetail(
     },
     [selectedChatId]
   )
-  console.log(messages);
 
   return (
     <>
@@ -100,7 +99,7 @@ export default function ChatDetail(
         last={<FontAwesomeIcon icon={faEllipsisV} size='lg' color='#009588' className='pointer' />}
       />
       <div className={styles['chat-box']}>
-        <Spinner loading={true} />
+        <Spinner loading={loading} />
         <ul className={styles['messages-panel']} ref={messageContainer}>
           {
             messages.map((message, index) => {
