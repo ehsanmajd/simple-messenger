@@ -14,7 +14,8 @@ export const INIT_STATE = {
 
 // `chat/start/user/{userId}`
 
-export function reducer(state, action) {
+export function reducer(state = INIT_STATE, action) {
+  console.log('action', action);
   return (ACTION_HANDLERS[action.type] || (() => state))(state, action.payload)
 }
 
